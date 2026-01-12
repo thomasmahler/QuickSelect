@@ -1,3 +1,5 @@
+<img width="1850" height="1182" alt="quickSelect" src="https://github.com/user-attachments/assets/60b169c7-4264-43f1-8c90-8261a94de2dc" />
+
 # Quick Select Editor
 
 A Unity Editor tool for quickly organizing and accessing your project assets. Create categories and subcategories to group your frequently used assets for fast access.
