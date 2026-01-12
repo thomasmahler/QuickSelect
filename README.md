@@ -1,4 +1,4 @@
-<img width="1850" height="1182" alt="quickSelect" src="https://github.com/user-attachments/assets/60b169c7-4264-43f1-8c90-8261a94de2dc" />
+<img width="1936" height="1262" alt="quickSelect" src="https://github.com/user-attachments/assets/d1c8a91e-da1f-4bec-8f74-2e099cb1fed2" />
 
 # Quick Select Editor
 
