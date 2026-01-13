@@ -14,6 +14,7 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+using System.Collections.Generic;
 using UnityEditor;
 using UnityEngine;
 
@@ -28,11 +29,19 @@ namespace QuickSelectEditor
         public WindowMode Mode;
 
         public delegate void OnActionDelegate(string input);
+        public delegate void OnAddCategoryDelegate(string name, Category parentCategory);
+        
         public OnActionDelegate OnAction;
+        public OnAddCategoryDelegate OnAddCategory;
 
         private string oldName;
         private string newName = "";
         private string controlName = "CategoryNameTextField";
+        
+        // For parent category selection
+        private List<Category> m_categories;
+        private Category m_selectedParent;
+        private string m_selectedParentDisplayName;
 
         private static EditorWindowUtility instance;
 
@@ -54,6 +63,37 @@ namespace QuickSelectEditor
             instance.oldName = oldName;
             instance.newName = oldName;
             instance.OnAction = onAction;
+            instance.OnAddCategory = null;
+            instance.m_categories = null;
+            instance.m_selectedParent = null;
+            instance.m_selectedParentDisplayName = null;
+            
+            instance.minSize = new Vector2(300, 80);
+            instance.maxSize = new Vector2(300, 80);
+            
+            instance.ShowUtility();
+            instance.Focus();
+        }
+
+        public static void ShowAddCategoryWindow(string title, List<Category> categories, Category preselectedParent, OnAddCategoryDelegate onAddCategory)
+        {
+            if (instance == null)
+            {
+                instance = CreateInstance<EditorWindowUtility>();
+            }
+            instance.titleContent = new GUIContent(title);
+            instance.Mode = WindowMode.AddCategory;
+            instance.oldName = "";
+            instance.newName = "";
+            instance.OnAction = null;
+            instance.OnAddCategory = onAddCategory;
+            instance.m_categories = categories;
+            instance.m_selectedParent = preselectedParent;
+            instance.m_selectedParentDisplayName = preselectedParent != null ? preselectedParent.name : "Root";
+            
+            instance.minSize = new Vector2(300, 105);
+            instance.maxSize = new Vector2(300, 105);
+            
             instance.ShowUtility();
             instance.Focus();
         }
@@ -80,15 +120,10 @@ namespace QuickSelectEditor
             }
 
             GUILayout.Label(labelText, EditorStyles.boldLabel);
-            EditorGUILayout.BeginHorizontal();
 
             if (Event.current.type == EventType.KeyDown && Event.current.keyCode == KeyCode.Return)
             {
-                if (!string.IsNullOrEmpty(newName) && !newName.Equals(oldName))
-                {
-                    OnAction?.Invoke(newName);
-                    Close();
-                }
+                TrySubmit();
                 Event.current.Use();
             }
 
@@ -100,16 +135,91 @@ namespace QuickSelectEditor
             GUI.SetNextControlName(controlName);
             newName = EditorGUILayout.TextField(newName);
 
-            EditorGUILayout.EndHorizontal();
+            // Show parent selector for AddCategory mode with categories
+            if (Mode == WindowMode.AddCategory && m_categories != null)
+            {
+                EditorGUILayout.BeginHorizontal();
+                EditorGUILayout.LabelField("Parent:", GUILayout.Width(45));
+                if (GUILayout.Button(m_selectedParentDisplayName, EditorStyles.popup))
+                {
+                    ShowParentSelectionMenu();
+                }
+                EditorGUILayout.EndHorizontal();
+            }
 
             if (GUILayout.Button(buttonText))
             {
-                if (!string.IsNullOrEmpty(newName) && !newName.Equals(oldName))
+                TrySubmit();
+            }
+        }
+
+        private void TrySubmit()
+        {
+            if (string.IsNullOrEmpty(newName))
+            {
+                return;
+            }
+            
+            if (OnAddCategory != null && m_categories != null)
+            {
+                OnAddCategory.Invoke(newName, m_selectedParent);
+                Close();
+            }
+            else if (OnAction != null && !newName.Equals(oldName))
+            {
+                OnAction.Invoke(newName);
+                Close();
+            }
+        }
+
+        private void ShowParentSelectionMenu()
+        {
+            GenericMenu menu = new GenericMenu();
+            
+            // Root option
+            bool isRoot = m_selectedParent == null;
+            menu.AddItem(new GUIContent("Root"), isRoot, () => SelectParent(null, "Root"));
+            
+            menu.AddSeparator("");
+            
+            // Add all categories with nested submenus
+            for (int i = 0; i < m_categories.Count; i++)
+            {
+                AddParentMenuItem(menu, m_categories[i], "");
+            }
+            
+            menu.ShowAsContext();
+        }
+
+        private void AddParentMenuItem(GenericMenu menu, Category category, string menuPath)
+        {
+            bool isSelected = m_selectedParent != null && m_selectedParent.id == category.id;
+            bool hasChildren = category.children != null && category.children.Count > 0;
+            
+            if (hasChildren)
+            {
+                // Category has children - create submenu with "Select" option
+                menu.AddItem(new GUIContent(menuPath + category.name + "/• Select"), isSelected, () => SelectParent(category, category.name));
+                menu.AddSeparator(menuPath + category.name + "/");
+                
+                // Add children
+                for (int i = 0; i < category.children.Count; i++)
                 {
-                    OnAction?.Invoke(newName);
-                    Close();
+                    AddParentMenuItem(menu, category.children[i], menuPath + category.name + "/");
                 }
             }
+            else
+            {
+                // Simple menu item
+                menu.AddItem(new GUIContent(menuPath + category.name), isSelected, () => SelectParent(category, category.name));
+            }
+        }
+
+        private void SelectParent(Category parent, string displayName)
+        {
+            m_selectedParent = parent;
+            m_selectedParentDisplayName = displayName;
+            Repaint();
         }
     }
 }
