@@ -56,19 +56,6 @@ Click the settings icon in the toolbar to configure:
 - Adjust button fonts based on editor size
 - Context menu display options
 
-## File Structure
-
-```
-QuickSelectWindow/
-├── QuickSelectWindow.cs        # Main editor window
-├── QuickSelectEditorSettings.cs # Settings window
-├── Category.cs                  # Category data model
-├── EditorPrefsUtility.cs        # Save/load utilities
-├── EditorWindowUtility.cs       # Popup window utility
-├── SharedLayoutFileWatcher.cs   # File change detection
-└── README.md                    # This file
-```
-
 ## Requirements
 
 - Unity 2019.4 or later
